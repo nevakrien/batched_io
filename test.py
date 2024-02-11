@@ -65,7 +65,7 @@ if __name__=="__main__":
 	ensure_crash(dumb())
 
 	# Example usage with a test dictionary
-	data = {"key": "value", "int": 1, "bool": True}#,"list": [1, 2, 3]}
+	data = {"key": "value", "int": 1, "bool": True,"list": [1, 2, 3]}
 	json_duration, c_batched_IO_duration, outputs_are_same = compare_serialization_speed_and_output(data)
 
 	print(f"JSON package duration: {json_duration}s")

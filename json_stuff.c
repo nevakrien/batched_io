@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <stdbool.h>
 static int serialize_dict(PyObject* dict, FILE* file);
+static int serialize_list(PyObject* list, FILE* file);
 
 static int serialize_to_json(PyObject* obj, FILE* file) {
     // Check object type and serialize accordingly
@@ -32,6 +33,9 @@ static int serialize_to_json(PyObject* obj, FILE* file) {
             }
         }
         fprintf(file, "\"");
+    }
+    else if(PyList_Check(obj)){
+        return serialize_list(obj, file);
     }
     else{
         return 1;
@@ -70,6 +74,30 @@ static int serialize_dict(PyObject* dict, FILE* file) {
     }
     // Handle trailing comma (if necessary) and close dict
     fprintf(file, "}");
+    return 0;
+}
+
+static int serialize_list(PyObject* list, FILE* file){
+    PyObject* elem;
+    Py_ssize_t size,i;
+
+    fprintf(file, "[");
+
+    bool first=true;
+    size = PyList_GET_SIZE(list);
+    for(i=0;i<size;i++){
+        if(!first){
+            fprintf(file, ", ");
+        }
+        else{
+            first=false;
+        }
+        elem=PyList_GetItem(list,i);
+        if(serialize_to_json(elem, file)){
+            return 1;
+        }
+    }
+    fprintf(file, "]");
     return 0;
 }
 
