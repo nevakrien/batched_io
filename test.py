@@ -6,6 +6,7 @@ import tempfile
 import os
 
 from concurrent.futures import ThreadPoolExecutor
+from junk import long_list
 import uuid
 
 def compare_serialization_speed_and_output(data):
@@ -44,7 +45,7 @@ def compare_serialization_speed_and_output(data):
 
     assert is_output_same
 
-    return json_duration, c_batched_IO_duration, is_output_same
+    return json_duration, c_batched_IO_duration#, is_output_same
 
 def ensure_crash(wrong):
 	assert not isinstance(wrong,dict) #we need to pass the wrong datatype...
@@ -113,7 +114,7 @@ def compare_batched_serialization_speed_and_output(data_list):
 
     #assert is_output_same
 
-    return json_duration, c_batched_IO_duration, is_output_same
+    return json_duration, c_batched_IO_duration#, is_output_same
 
 if __name__=="__main__":
 	print(f'showing the modules stuff\n{dir(c_batched_IO)}')
@@ -124,17 +125,29 @@ if __name__=="__main__":
 
 	# Example usage with a test dictionary
 	data = {"key": "value", "int": 1, "bool": True,"list": [1, 2, 3],'tup':(2,1)}
-	json_duration, c_batched_IO_duration, outputs_are_same = compare_serialization_speed_and_output(data)
+	json_duration, c_batched_IO_duration = compare_serialization_speed_and_output(data)
 
+	print('single write:')
 	print(f"JSON package duration: {json_duration}s")
 	print(f"c_batched_IO package duration: {c_batched_IO_duration}s")
-	print(f"Outputs are the same: {outputs_are_same}")
+	#print(f"Outputs are the same: {outputs_are_same}")
 
 
 	# Example usage with a test dictionary
-	data_list = [{"key": "value", "int": 1, "bool": True,"list": [1, 2, 3],'tup':(2,1)},{"bool": False,"list": [1, 2,]}] #{'key':"value"}]}]
-	json_duration, c_batched_IO_duration, outputs_are_same = compare_batched_serialization_speed_and_output(data_list)
+	data_list = [{"key": "value", "int": 1, "bool": True,"list": [1, 2, 3],'tup':(2,1)},{"bool": False,"list": [1, 2,{'key':"value"}]}]
+	data_list+=long_list#(just json junk)
+	json_duration, c_batched_IO_duration = compare_batched_serialization_speed_and_output(data_list)
 
+	print('\n50ish small writes using batch_dump')
 	print(f"JSON package duration: {json_duration}s")
 	print(f"c_batched_IO package duration: {c_batched_IO_duration}s")
-	print(f"Outputs are the same: {outputs_are_same}")
+	#print(f"Outputs are the same: {outputs_are_same}")
+
+	# Example usage with a test dictionary
+	#data_list = [{"key": "value", "int": 1, "bool": True,"list": [1, 2, 3],'tup':(2,1)},{"bool": False,"list": [1, 2,{'key':"value"}]}]
+	data_list+=data_list#(just json junk)
+	json_duration, c_batched_IO_duration = compare_batched_serialization_speed_and_output(data_list)
+
+	print('\n100ish small writes using batch_dump')
+	print(f"JSON package duration: {json_duration}s")
+	print(f"c_batched_IO package duration: {c_batched_IO_duration}s")
