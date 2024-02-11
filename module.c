@@ -2,7 +2,8 @@
 #include "json_stuff.c"
 
 static PyMethodDef MyMethods[] = {
-    {"write_json_to_file", py_write_json_to_file, METH_VARARGS, "Write an object to a file as JSON."},
+    {"write_json_to_file", py_write_json_to_file, METH_VARARGS, "Write a dict to a file as JSON."},
+    {"batch_dump",py_write_jsons, METH_VARARGS, "writes a list of dicts to list of files as jsons"},
     {NULL, NULL, 0, NULL} // Sentinel
 };
 

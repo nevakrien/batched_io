@@ -34,7 +34,7 @@ static int serialize_to_json(PyObject* obj, FILE* file) {
         }
         fprintf(file, "\"");
     }
-    else if(PyList_Check(obj)){
+    else if(PyTuple_Check(obj) || PyList_Check(obj)){
         return serialize_list(obj, file);
     }
     else{
@@ -84,7 +84,7 @@ static int serialize_list(PyObject* list, FILE* file){
     fprintf(file, "[");
 
     bool first=true;
-    size = PyList_GET_SIZE(list);
+    size = PySequence_Size(list);
     for(i=0;i<size;i++){
         if(!first){
             fprintf(file, ", ");
@@ -92,7 +92,7 @@ static int serialize_list(PyObject* list, FILE* file){
         else{
             first=false;
         }
-        elem=PyList_GetItem(list,i);
+        elem=PySequence_GetItem(list,i);
         if(serialize_to_json(elem, file)){
             return 1;
         }
@@ -119,7 +119,7 @@ static PyObject* py_write_json_to_file(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    if (serialize_to_json(obj, file) != 0) {
+    if (serialize_dict(obj, file) != 0) {
         fclose(file); // Ensure the file is closed before handling the error
         remove(filename); // Optionally delete the file since it might be incomplete or invalid
         PyErr_Format(PyExc_Exception, "Failed to serialize object to JSON");
@@ -131,3 +131,79 @@ static PyObject* py_write_json_to_file(PyObject* self, PyObject* args) {
 }
 
 
+static PyObject* py_write_jsons(PyObject* self, PyObject* args){
+    PyObject* file_names_sequnces;
+    PyObject* dicts_sequnces;
+
+    if (!PyArg_ParseTuple(args, "OO", &dicts_sequnces, &file_names_sequnces)) {
+        return NULL; // Argument parsing failed
+    }
+
+    if (!PySequence_Check(file_names_sequnces)){
+        PyErr_Format(PyExc_Exception, "'file_names must be a sequnce'");
+        return NULL;
+        
+    }
+
+    if (!PySequence_Check(dicts_sequnces)){
+        PyErr_Format(PyExc_Exception, "'dicts must be a sequnce'");
+        return NULL;
+        
+    }
+
+    Py_ssize_t size,i; //will be clever about using i
+    size = PySequence_Length(file_names_sequnces);
+    i=PySequence_Length(dicts_sequnces);
+
+    if(size==-1||i==-1){
+        PyErr_Format(PyExc_Exception, "'both sequnces must support PySequence_Length'");
+        return NULL;
+    }
+
+    if(i!=size){
+        PyErr_Format(PyExc_Exception, "'both sequnces must be the same length'");
+        return NULL;
+    }
+
+
+    //int fails[size];
+    int failed=0;
+    #pragma omp parallel for schedule(dynamic) num_threads(size)
+    for(i=0;i<size;i++){
+
+        //printf("%ld\n",i);
+        PyObject* dict=PySequence_GetItem(dicts_sequnces,i);;
+        if (!PyDict_Check(dict)){
+            failed=1;
+            continue;
+        }
+
+        PyObject* py_name=PySequence_GetItem(file_names_sequnces,i);
+        const char *filename=PyUnicode_AsUTF8(py_name);
+        if(filename==NULL){
+            failed=1;
+            continue;
+        }
+
+        FILE* file = fopen(filename, "w");
+        if (!file) {
+            failed=1;
+            continue;
+        }
+
+        //printf("%ld got to serilizing\n",i);
+        if(serialize_dict(dict,file)){
+            failed=1;
+            continue;
+        }
+        fclose(file);
+        
+    }
+
+    if(failed){
+        PyErr_Format(PyExc_Exception, "'an exception happened during dumping\n you should still see some files around'");
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
